@@ -32,7 +32,12 @@ class Tracker:
 
         self.debug = True
         self.debug_obj = Debug.Debug(self.debug)
+
         self.util_obj = Utility.Utility(self.debug_obj)
+        cwd = os.getcwd()
+        #print(f'Searching for .env at {cwd}')
+        self.debug_obj.debug_log(f'Searching for .env at {cwd}')
+        self.util_obj.load_env_variables(f"{cwd}/.env")
 
         self.ESPRESSO_PW_EXE = self.util_obj.checkEnvironmentalVars("ESPRESSO_PW_EXE")
         self.util_obj.checkEnvironmentalVars("ESPRESSO_PP_EXE") #just check, don't need to save
@@ -225,9 +230,11 @@ class Tracker:
 
         if defectType == "VAC":
             defectTypeFound = True
-            for vac_defect in VacancyGenerator(self.pristine_object.supercell):
+            vac_generator = VacancyGenerator()
+            for vac_defect in vac_generator.generate(self.pristine_object.supercell):
                 #define a unique defect name (will be used to block non-unique additons)
-                defect_name = "VAC_" + str(vac_defect.defect_composition) + "_" + str(vac_defect.site)
+                comp = str(vac_defect.defect_structure.composition.element_composition).replace(" ","_")
+                defect_name = "VAC_" + str(comp) + "_" + str(vac_defect.site)
                 self.debug_obj.debug_log(defect_name)
                 #create an addition to the dictionary of defects to adds
                 defects_to_add[defect_name] = vac_defect
@@ -244,7 +251,8 @@ class Tracker:
             for sub_defect in SubstitutionGenerator(self.pristine_object.supercell,element=sub_element):
                 self.debug_obj.debug_log(sub_defect.defect_composition)
                 #define a unique defect name (will be used to block non-unique additons)
-                defect_name = "SUB_" + str(sub_defect.defect_composition) + "_" + str(sub_defect.site)
+                comp = str(sub_defect.defect_structure.composition.element_composition).replace(" ","_")
+                defect_name = "SUB_" + str(comp) + "_" + str(sub_defect.site)
                 #create an addition to the dictionary of defects to adds
                 defects_to_add[defect_name] = sub_defect
             #fill out later
@@ -261,8 +269,8 @@ class Tracker:
         for newKey in defects_to_add:
 
             #Check that the defect is the right composition as specified in arguments
-            if check_if_matching_composition(allowed_defect_composition,
-                                             defects_to_add[newKey].defect_composition):
+            new_comp_dict = defects_to_add[newKey].defect_structure.composition.element_composition.as_dict()
+            if check_if_matching_composition(allowed_defect_composition,new_comp_dict):
 
                 #Check that the defect has not already been added (no dupes!)
                 if newKey not in self.defect_dict.keys():
@@ -274,7 +282,7 @@ class Tracker:
                     if defectType == "INT":
                         self.type_count["INT"] += 1
 
-                    supercell_structure = defects_to_add[newKey].generate_defect_structure()
+                    supercell_structure = defects_to_add[newKey].defect_structure
                     
                     self.defect_dict[newKey] = SingleSupercell.SingleSupercell(
                         type = defectType,

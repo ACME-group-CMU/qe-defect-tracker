@@ -10,7 +10,7 @@ import ase.io.espresso as ase_qe_support
 from ase.io import read as ase_read
 
 #Pymatgen
-from pymatgen.analysis.defects.core import DefectEntry
+from pymatgen.analysis.defects.core import Defect
 from pymatgen.io.ase import AseAtomsAdaptor
 
 #Other
@@ -447,14 +447,19 @@ class SingleSupercell(object):
 
                 corrections.update(FNV_energies)
 
-            self.defect_object.set_charge(charge)
+            #self.defect_object.set_charge(charge)
+            self.defect_object.user_charges = [charge]
 
-            defect_entry = DefectEntry(self.defect_object,
+            """ #Hold over from old Pymatgen
+            defect_entry = Defect(self.defect_object,
                                        uncorrected_energy,
                                        corrections=corrections,
                                        parameters=pymatgen_parameters)
+            """
 
-            self.pymatgen_defect_objects.append(defect_entry.copy())
+            #defect_entry = Defect(self.defect_object.defect_structure)
+
+            self.pymatgen_defect_objects.append(copy.deepcopy(self.defect_object))
 
         #global_path = self.qe_parameters['control']['outdir']
         #self.util_obj.changeDirectory(global_path)

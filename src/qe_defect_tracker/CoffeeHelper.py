@@ -33,7 +33,7 @@ class CoffeeHelper(object):
         self.list_of_supercell_dims = [supercell_dim_1,supercell_dim_2,supercell_dim_3]
         self.list_of_supercell_energies = [0,0,0]
 
-        self.super_structure = self.defect_object.generate_defect_structure()
+        self.super_structure = self.defect_object.defect_structure
 
         self.ecut = ecut
         self.sigma = 0
@@ -158,6 +158,10 @@ class CoffeeHelper(object):
                 supercell_str = f"{str(supercell_dim[0])}x{str(supercell_dim[1])}x{str(supercell_dim[2])}"
                 input_name_with_supercell = self.input_name.replace("#",supercell_str)
                 specific_input_name = charge_path + "/" + input_name_with_supercell
+
+                self.debug_obj.debug_log(f"Charge: {charge}")
+                self.debug_obj.debug_log(f"supercell_dim: {supercell_dim}")
+                self.debug_obj.debug_log(f"Input Name: {specific_input_name}")
 
                 self._generateCoffeeInput(charge,supercell_dim,specific_input_name)
 
