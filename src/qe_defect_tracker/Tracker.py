@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 #other
 import os
 import importlib
+from dotenv import load_dotenv
 
 #Other Defect Trackin Items
 from qe_defect_tracker import SingleSupercell
@@ -32,14 +33,13 @@ class Tracker:
 
         self.debug = True
         self.debug_obj = Debug.Debug(self.debug)
-
         self.util_obj = Utility.Utility(self.debug_obj)
-        cwd = os.getcwd()
-        #print(f'Searching for .env at {cwd}')
-        self.debug_obj.debug_log(f'Searching for .env at {cwd}')
-        self.util_obj.load_env_variables(f"{cwd}/.env")
+
+        #load in config info from the .env
+        load_dotenv(override=True)
 
         self.ESPRESSO_PW_EXE = self.util_obj.checkEnvironmentalVars("ESPRESSO_PW_EXE")
+        print(f"self.ESPRESSO_PW_EXE: {self.ESPRESSO_PW_EXE}")
         self.util_obj.checkEnvironmentalVars("ESPRESSO_PP_EXE") #just check, don't need to save
         coffee_dir = self.util_obj.checkEnvironmentalVars("COFFEE_DIR") #just check, don't need to save
         self.util_obj.checkEnvironmentalVars("MPI_API_KEY")
@@ -133,7 +133,8 @@ class Tracker:
     # Note: This function does two things (sets params and starts DFT calc) because
     #       I don't want a mismatch between QE params and DFT-calculated energy.
     # Note: If NEW params/pseudos/kpts are set, the old defect energies are cleared out
-    def calculatePristineEnergy(self,qe_parameters,pseudopotentials,kpts,compute_parameters=None,correction_params = None,force_recalc = False):
+    def calculatePristineEnergy(self,qe_parameters,pseudopotentials,kpts=None,min_kpt_density=None,
+                                compute_parameters=None,correction_params = None,force_recalc = False):
 
         self.setEspressoCommand(compute_parameters)
 
@@ -147,6 +148,7 @@ class Tracker:
         self.qe_parameters = qe_parameters
         self.pseudopotentials = pseudopotentials
         self.kpts = kpts
+        self.min_kpt_density = min_kpt_density
 
         #Check that any info used in code is present
         if(self.check_qe_parameters() == False):
@@ -157,7 +159,8 @@ class Tracker:
 
         result = self.pristine_object.runDFTCalculation(self.qe_parameters,
                                                         self.pseudopotentials,
-                                                        self.kpts,
+                                                        kpts = self.kpts,
+                                                        min_kpt_density = self.min_kpt_density,
                                                         correction_params = correction_params,
                                                         force_recalc = force_recalc)
 

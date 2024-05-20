@@ -1,6 +1,5 @@
 
 import os
-from dotenv import load_dotenv
 
 class Utility(object):
 
@@ -8,10 +7,6 @@ class Utility(object):
 
         self.debug_obj = debug_obj
         #self.dot_env_path = None
-
-    def load_env_variables(self,dot_env_path):
-        load_dotenv(dot_env_path,override=True)
-        #self.dot_env_path = dot_env_path
 
     def checkEnvironmentalVars(self,env_var):
 

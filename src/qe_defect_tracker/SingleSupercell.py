@@ -19,6 +19,7 @@ import os
 import subprocess
 import importlib
 import math
+import numpy as np
 import re
 
 #Defect tracking files
@@ -107,21 +108,43 @@ class SingleSupercell(object):
     # arg | pseudopotentials | dictionary of pseudopotentials
     # arg | kpts | list of kpoints | e.g. [2,2,2]
     # return True is successful, false if not
-    def runDFTCalculation(self,qe_parameters,pseudopotentials,kpts,correction_params = None,force_recalc = False):
+    def runDFTCalculation(self,qe_parameters,pseudopotentials,kpts=None,min_kpt_density=None,
+                          correction_params = None,force_recalc = False):
 
         self.pseudopotentials = pseudopotentials
         self.qe_parameters = qe_parameters
 
+        if kpts is None and min_kpt_density is None:
+            self.debug_obj.debug_log(f"Kpt info is not defined!",type="ERROR")
+
+        if kpts is not None and min_kpt_density is not None:
+            self.debug_obj.debug_log(f"Kpt info is over-defined. Directly select kpts or set the kpt density.",type="ERROR")
+
         try:
-            if type(kpts[0]) is list and type(kpts[1]) is list:
-                self.unitcell_kpts = kpts[0]
-                self.supercell_kpts = kpts[1]
-            else:
+            self.debug_obj.debug_log(f"Unitcell Matrix: \n{self.unitcell.lattice.matrix}")
+        except:
+            print("Unitcell not currently defined")
+
+        if min_kpt_density is not None:
+            unitcell_rec_lengths = np.array(self.unitcell.lattice.reciprocal_lattice.abc)
+            self.debug_obj.debug_log(f"unitcell_rec_lengths: {unitcell_rec_lengths}")
+            kpt_unitcell_exact = min_kpt_density * unitcell_rec_lengths
+            self.debug_obj.debug_log(f"kpt_unitcell_exact: {kpt_unitcell_exact}")
+            self.unitcell_kpts = [math.ceil(x) for x in kpt_unitcell_exact]
+            self.debug_obj.debug_log(f"unitcell kpts: {self.unitcell_kpts}")
+            #CANNOT yet set the supercell kpts
+
+        if kpts is not None:
+            try:
+                if type(kpts[0]) is list and type(kpts[1]) is list:
+                    self.unitcell_kpts = kpts[0]
+                    self.supercell_kpts = kpts[1]
+                else:
+                    self.unitcell_kpts = kpts
+                    self.supercell_kpts = kpts
+            except:
                 self.unitcell_kpts = kpts
                 self.supercell_kpts = kpts
-        except:
-            self.unitcell_kpts = kpts
-            self.supercell_kpts = kpts
 
         if correction_params is not None:
             self.fs_correction_type = correction_params['type']
@@ -304,6 +327,15 @@ class SingleSupercell(object):
                 self.debug_obj.debug_log(f"Starting DFT calculation")
 
                 self.util_obj.changeDirectory(charge_path)
+
+                #Set the kpts here if defined with a density
+                if min_kpt_density is not None:
+                    supercell_rec_lengths = np.array(self.supercell.lattice.reciprocal_lattice.abc)
+                    self.debug_obj.debug_log(f"supercell_rec_lengths: {supercell_rec_lengths}")
+                    kpt_supercell_exact = min_kpt_density * supercell_rec_lengths
+                    self.debug_obj.debug_log(f"kpt_supercell_exact: {kpt_supercell_exact}")
+                    self.supercell_kpts = [math.ceil(x) for x in kpt_supercell_exact]
+                    self.debug_obj.debug_log(f"Supercell kpts: {self.supercell_kpts}")
 
                 #copy the params of the generic defect and update for the charge
                 qe_parameters_temp = copy.deepcopy(self.qe_parameters)
