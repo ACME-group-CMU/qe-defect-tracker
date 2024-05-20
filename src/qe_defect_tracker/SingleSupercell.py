@@ -111,6 +111,9 @@ class SingleSupercell(object):
     def runDFTCalculation(self,qe_parameters,pseudopotentials,kpts=None,min_kpt_density=None,
                           correction_params = None,force_recalc = False):
 
+        print(f"kpts: {kpts}")
+        print(f"min_kpt_density: {min_kpt_density}")
+
         self.pseudopotentials = pseudopotentials
         self.qe_parameters = qe_parameters
 

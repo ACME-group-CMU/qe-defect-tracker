@@ -4,6 +4,10 @@ import math
 from scipy.optimize import minimize
 from pymatgen.transformations.standard_transformations import RotationTransformation
 from pymatgen.ext.matproj import MPRester
+import importlib
+
+from qe_defect_tracker import Utility
+importlib.reload(Utility)
 
 class Optimize_Structure_Rotation():
 
@@ -90,6 +94,7 @@ class MP_Helper(object):
 
     def __init__(self,debug_obj=None):
         self.debug_obj = debug_obj
+        self.util_obj = Utility.Utility(self.debug_obj)
 
         a =  sym.symbols('a')
         b =  sym.symbols('b')

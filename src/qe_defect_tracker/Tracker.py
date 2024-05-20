@@ -21,6 +21,9 @@ importlib.reload(Debug)
 from qe_defect_tracker import Utility
 importlib.reload(Utility)
 
+from qe_defect_tracker import MP_Helper
+importlib.reload(MP_Helper)
+
 class Tracker:
 
     # arg | pristine_supercell | Pymatgen Object of Pristine Supercell
@@ -29,11 +32,13 @@ class Tracker:
                  pymatgen_unitcell = None,
                  supercell_dim = None,
                  molecule_species_mpid = None,
+                 auto_define_ibrav=False,
                  delete_wfc_files=False):
 
         self.debug = True
         self.debug_obj = Debug.Debug(self.debug)
         self.util_obj = Utility.Utility(self.debug_obj)
+        self.mp_helper = MP_Helper.MP_Helper(self.debug_obj)
 
         #load in config info from the .env
         load_dotenv(override=True)
@@ -50,6 +55,8 @@ class Tracker:
         self.unit_cell_type = unit_cell_type
         self.mpid = molecule_species_mpid
         self.supercell_dim = supercell_dim
+        self.auto_define_ibrav = auto_define_ibrav
+        self.qe_ibrav_number = False
 
         self.qe_parameters = None
         self.pseudopotentials = None
@@ -64,23 +71,41 @@ class Tracker:
             "INT": 0,
         }
 
-        supercell_pristine = None
         unitcell_pristine = None
-        if self.unit_cell_type == 'primitive' or self.unit_cell_type == 'conventional':
 
-            #Create a pristine supercell
-            with MPRester(self.util_obj.checkEnvironmentalVars("MPI_API_KEY")) as mp:
-                #This will be the primitive structure
-                unit_cell_structure = mp.get_structure_by_material_id(molecule_species_mpid,) #Au
+        if(self.auto_define_ibrav == True):
+            valid_result,best_structure = self.mp_helper.find_best_qe_ibrav(molecule_species_mpid,
+                                                                           only_test_ibravs = False,
+                                                                           print_info=False,
+                                                                           test_all_ibrav = True)
+            if(valid_result):
+                unitcell_pristine = best_structure['struct']
+                self.qe_ibrav_number = int(best_structure['ibrav'])
 
-            if self.unit_cell_type == 'primitive':
-                unitcell_pristine = unit_cell_structure
+                self.debug_obj.debug_log(f"Auto struct: {unitcell_pristine}")
+                self.debug_obj.debug_log(f"Auto Ibrav: {self.qe_ibrav_number}")
+                self.debug_obj.debug_log(f"Auto Atom Num: {best_structure['atom_num']}")
 
-            if self.unit_cell_type == 'conventional':
-                unitcell_pristine = SpacegroupAnalyzer(unit_cell_structure).get_conventional_standard_structure()
+            else:
+                self.debug_obj.debug_log(f"QE ibrav value could not be auto defined!")
+                return
+        else:
+            if self.unit_cell_type == 'primitive' or self.unit_cell_type == 'conventional':
 
-        if self.unit_cell_type == 'self-defined':
-            unitcell_pristine = pymatgen_unitcell
+                #Create a pristine supercell
+                with MPRester(self.util_obj.checkEnvironmentalVars("MPI_API_KEY")) as mp:
+                    #This will be the primitive structure
+                    unit_cell_structure = mp.get_structure_by_material_id(molecule_species_mpid,) #Au
+
+                if self.unit_cell_type == 'primitive':
+                    unitcell_pristine = unit_cell_structure
+
+                if self.unit_cell_type == 'conventional':
+                    unitcell_pristine = SpacegroupAnalyzer(unit_cell_structure).get_conventional_standard_structure()
+
+            if self.unit_cell_type == 'self-defined':
+                unitcell_pristine = pymatgen_unitcell
+
 
         #now generate the pristine object that will be copied to make all defects
         self.pristine_object = SingleSupercell.SingleSupercell(type ="PRISTINE",
@@ -146,6 +171,10 @@ class Tracker:
             self.clearDefectEnergies()
 
         self.qe_parameters = qe_parameters
+        if(self.qe_ibrav_number != False):
+            self.qe_parameters['system']['ibrav'] = self.qe_ibrav_number
+        print(f" self.qe_parameters: {self.qe_parameters}")
+
         self.pseudopotentials = pseudopotentials
         self.kpts = kpts
         self.min_kpt_density = min_kpt_density
