@@ -401,8 +401,13 @@ class SingleSupercell(object):
 
                     if run_pp_that_doesnt_require_wfc:
                         plot_num = 1
-                        grid_size = self.fs_correction_details['grid_size']
-                        self.debug_obj.debug_log(f"grid_size: {grid_size}")
+                        grid_size = None
+                        try:
+                            grid_size = self.fs_correction_details['grid_size']
+                            self.debug_obj.debug_log(f"grid_size: {grid_size}")
+                        except:
+                            self.debug_obj.debug_log(f"No grid size provided.")
+
                         self.generate_pp_file(prefix, charge_path,plot_num,grid_size=grid_size)
 
                     if run_pp_that_requires_wfc == True and charge !=0:
